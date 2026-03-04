@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String   @id @default(uuid())
+  email            String?  @unique
+  name             String
+  age              String
+  gender           String
+  location         String
+  mobile           String
+  genderPreference String
+  datingRange      String
+  
+  sports           String   // Storing JSON string of sports array
+  playSports       String   // Storing JSON string
+  likeSports       String   // Storing JSON string
+  photos           String   // Storing JSON string array of base64 photos
+  
+  createdAt        DateTime @default(now())
+}
+
+model DiscoverProfile {
+  id       String   @id @default(uuid())
+  name     String
+  age      Int
+  distance String?
+  image    String
+  sports   String   // Storing JSON string
+}
+
+model InterestedUser {
+  id     String   @id @default(uuid())
+  name   String
+  age    Int
+  image  String
+  sports   String?  // Storing JSON string
+}
+
+model Notification {
+  id      String   @id @default(uuid())
+  title   String?
+  message String
+  time    String
+  unread  Boolean  @default(true)
+  type    String
+  link    String?
+}
+
+model Match {
+  id          String   @id @default(uuid())
+  name        String
+  image       String
+  lastMessage String?
+  time        String?
+  unreadCount Int      @default(0)
+  isOnline    Boolean  @default(false)
+}
+
+model Message {
+  id          String   @id @default(uuid())
+  chatId      String
+  sender      String
+  text        String
+  date        String
+  read        Boolean  @default(false)
+  systemAlert Boolean  @default(false)
+}
