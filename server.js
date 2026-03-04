@@ -18,8 +18,6 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '50mb' }));
 
-app.options('*', cors());
-
 // --- Auth (Google) ---
 app.post('/api/auth/google', async (req, res) => {
     const { token } = req.body;
@@ -50,10 +48,11 @@ app.post('/api/auth/google', async (req, res) => {
 // --- Users (Onboarding) ---
 app.post('/users', async (req, res) => {
     try {
-        const { name, age, gender, location, mobile, preferences, sports, playSports, likeSports, photos } = req.body;
+        const { email, name, age, gender, location, mobile, preferences, sports, playSports, likeSports, photos, bio } = req.body;
 
         const newUser = await prisma.user.create({
             data: {
+                email: email || undefined,
                 name: name || '',
                 age: age || '',
                 gender: gender || '',
@@ -61,6 +60,7 @@ app.post('/users', async (req, res) => {
                 mobile: mobile || '',
                 genderPreference: preferences?.genderPreference || '',
                 datingRange: preferences?.datingRange || '',
+                bio: bio || '',
                 sports: JSON.stringify(sports || []),
                 playSports: JSON.stringify(playSports || []),
                 likeSports: JSON.stringify(likeSports || []),
@@ -147,6 +147,19 @@ app.get('/messages', async (req, res) => {
         ])
     }
     res.json(messages);
+});
+
+// --- Cities ---
+app.get('/cities', async (req, res) => {
+    try {
+        const cities = await prisma.city.findMany({
+            orderBy: { name: 'asc' }
+        });
+        res.json(cities);
+    } catch (error) {
+        console.error("Error fetching cities:", error);
+        res.status(500).json({ error: "Failed to fetch cities" });
+    }
 });
 
 app.post('/messages', async (req, res) => {

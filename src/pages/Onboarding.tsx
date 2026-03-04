@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin } from 'lucide-react';
 import Button from '../components/ui/Button';
@@ -23,11 +23,12 @@ export default function Onboarding() {
 
     // Form State
     const [profile, setProfile] = useState({
-        name: 'Alex Developer', // Auto-filled mock
-        age: '25', // Auto-filled mock
+        name: localStorage.getItem('tempName') || '',
+        age: '',
         gender: '',
         location: '',
-        mobile: ''
+        mobile: '',
+        bio: ''
     });
 
     const [preferences, setPreferences] = useState({
@@ -35,21 +36,16 @@ export default function Onboarding() {
         datingRange: ''
     });
 
-    const CITIES = [
-        'Mumbai, Maharashtra', 'Delhi, Delhi', 'Bangalore, Karnataka', 'Hyderabad, Telangana',
-        'Ahmedabad, Gujarat', 'Chennai, Tamil Nadu', 'Kolkata, West Bengal', 'Surat, Gujarat',
-        'Pune, Maharashtra', 'Jaipur, Rajasthan', 'Lucknow, Uttar Pradesh', 'Kanpur, Uttar Pradesh',
-        'Nagpur, Maharashtra', 'Indore, Madhya Pradesh', 'Thane, Maharashtra', 'Bhopal, Madhya Pradesh',
-        'Visakhapatnam, Andhra Pradesh', 'Pimpri-Chinchwad, Maharashtra', 'Patna, Bihar', 'Vadodara, Gujarat',
-        'Ghaziabad, Uttar Pradesh', 'Ludhiana, Punjab', 'Agra, Uttar Pradesh', 'Nashik, Maharashtra',
-        'Ranchi, Jharkhand', 'Faridabad, Haryana', 'Meerut, Uttar Pradesh', 'Rajkot, Gujarat',
-        'Kalyan-Dombivli, Maharashtra', 'Vasai-Virar, Maharashtra', 'Varanasi, Uttar Pradesh', 'Srinagar, Jammu & Kashmir',
-        'Aurangabad, Maharashtra', 'Dhanbad, Jharkhand', 'Amritsar, Punjab', 'Navi Mumbai, Maharashtra',
-        'Allahabad, Uttar Pradesh', 'Howrah, West Bengal', 'Gwalior, Madhya Pradesh', 'Jabalpur, Madhya Pradesh',
-        'Coimbatore, Tamil Nadu', 'Vijayawada, Andhra Pradesh', 'Jodhpur, Rajasthan', 'Madurai, Tamil Nadu',
-        'Raipur, Chhattisgarh', 'Kota, Rajasthan', 'Guwahati, Assam', 'Chandigarh, Chandigarh', 'Solapur, Maharashtra'
-    ];
-    const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
+    // Cities from DB
+    const [dbCities, setDbCities] = useState<{ id: string, name: string, state: string }[]>([]);
+    const [citySuggestions, setCitySuggestions] = useState<{ id: string, name: string, state: string }[]>([]);
+
+    useEffect(() => {
+        fetch('http://localhost:3001/cities')
+            .then(res => res.json())
+            .then(data => setDbCities(data))
+            .catch(err => console.error("Failed to fetch cities", err));
+    }, []);
 
     // Sports State
     const [playSports, setPlaySports] = useState<string[]>([]);
@@ -62,25 +58,71 @@ export default function Onboarding() {
     // Photos state
     const [photos, setPhotos] = useState<string[]>([]);
 
+    // Validation states
+    const [mobileError, setMobileError] = useState('');
+    const [nameError, setNameError] = useState('');
+    const [ageError, setAgeError] = useState('');
+
     const handleNextStep1 = () => {
-        if (profile.name && profile.age && profile.gender && profile.location && profile.mobile) {
-            setStep(2);
-        } else {
+        setMobileError('');
+        setNameError('');
+        setAgeError('');
+
+        if (!profile.name || !profile.age || !profile.gender || !profile.location || !profile.mobile) {
             alert("Please fill in all mandatory details.");
+            return;
         }
+
+        // Age Validation: Must be at least 18
+        const ageNum = parseInt(profile.age, 10);
+        if (isNaN(ageNum) || ageNum < 18) {
+            setAgeError('You must be at least 18 years old to use Deuce.');
+            return;
+        }
+
+        // Name Validation: Only letters and spaces
+        const nameRegex = /^[A-Za-z\s]+$/;
+        if (!nameRegex.test(profile.name.trim())) {
+            setNameError('Name should only contain letters and spaces.');
+            return;
+        }
+
+        // Mobile Validation: Exactly 10 digits, starts with 6-9
+        const mobileRegex = /^[6-9]\d{9}$/;
+        if (!mobileRegex.test(profile.mobile)) {
+            setMobileError('Please enter a valid 10-digit Indian mobile number.');
+            return;
+        }
+
+        // Mobile Validation: Reject 10 identical digits (e.g. 9999999999, 8888888888)
+        const allSameDigitsRegex = /^(\d)\1{9}$/;
+        if (allSameDigitsRegex.test(profile.mobile)) {
+            setMobileError('Invalid mobile sequence (repeating digits).');
+            return;
+        }
+
+        setStep(2);
     };
 
     const handleNextStep2 = () => {
-        if (totalSelected > 0) {
+        if (profile.bio.trim()) {
             setStep(3);
+        } else {
+            alert("Please write a short bio about yourself.");
+        }
+    };
+
+    const handleNextStep3 = () => {
+        if (totalSelected > 0) {
+            setStep(4);
         } else {
             alert("Please select at least one sport.");
         }
     };
 
-    const handleNextStep3 = () => {
+    const handleNextStep4 = () => {
         if (preferences.genderPreference && preferences.datingRange) {
-            setStep(4);
+            setStep(5);
         } else {
             alert("Please fill in your preferences.");
         }
@@ -114,16 +156,50 @@ export default function Onboarding() {
         const val = e.target.value;
         setProfile({ ...profile, location: val });
         if (val.length > 0) {
-            setCitySuggestions(CITIES.filter(c => c.toLowerCase().includes(val.toLowerCase())));
+            const matches = dbCities.filter(c =>
+                c.name.toLowerCase().includes(val.toLowerCase()) ||
+                c.state.toLowerCase().includes(val.toLowerCase())
+            );
+            setCitySuggestions(matches);
         } else {
             setCitySuggestions([]);
         }
     };
 
     const fetchDeviceLocation = () => {
-        // Mock geolocation fetch
-        setProfile({ ...profile, location: 'Bangalore' });
-        setCitySuggestions([]);
+        if (!navigator.geolocation) {
+            alert("Geolocation is not supported by your browser");
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            const { latitude, longitude } = position.coords;
+            try {
+                // Using OpenStreetMap Nominatim for free reverse geocoding
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10`);
+                const data = await res.json();
+
+                // Extract city or county/district name
+                let detectedCity = data.address.city || data.address.state_district || data.address.county || '';
+
+                // Clean up trailing " District" if present
+                detectedCity = detectedCity.replace(' District', '');
+
+                if (detectedCity) {
+                    // Try to map to state if we can, else just use the city
+                    const state = data.address.state || '';
+                    setProfile({ ...profile, location: `${detectedCity}${state ? `, ${state}` : ''}` });
+                } else {
+                    alert("Could not determine your city from location data.");
+                }
+            } catch (error) {
+                console.error("Geocoding failed", error);
+                alert("Failed to fetch location address.");
+            }
+            setCitySuggestions([]);
+        }, () => {
+            alert("Unable to retrieve your location. Please check your permissions.");
+        });
     };
 
     const toggleSport = (sportId: string, listType: 'play' | 'like') => {
@@ -204,9 +280,9 @@ export default function Onboarding() {
                 )}
                 {/* Progress Bar */}
                 <div style={{ flex: 1, height: '4px', backgroundColor: '#e5e7eb', borderRadius: '2px', marginRight: '1rem' }}>
-                    <div style={{ width: step === 1 ? '25%' : step === 2 ? '50%' : step === 3 ? '75%' : '100%', height: '100%', backgroundColor: 'var(--secondary)', borderRadius: '2px', transition: 'width 0.3s' }} />
+                    <div style={{ width: step === 1 ? '20%' : step === 2 ? '40%' : step === 3 ? '60%' : step === 4 ? '80%' : '100%', height: '100%', backgroundColor: 'var(--secondary)', borderRadius: '2px', transition: 'width 0.3s' }} />
                 </div>
-                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-muted)' }}>{step}/4</span>
+                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-muted)' }}>{step}/5</span>
             </div>
 
             {step === 1 && (
@@ -216,20 +292,42 @@ export default function Onboarding() {
 
                     <div style={{ flex: 1 }}>
                         <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <input
-                                type="text"
-                                placeholder="Name"
-                                value={profile.name}
-                                readOnly
-                                style={{ backgroundColor: '#f3f4f6', color: 'var(--text-muted)', marginBottom: 0 }}
-                            />
-                            <input
-                                type="number"
-                                placeholder="Age"
-                                value={profile.age}
-                                onChange={e => setProfile({ ...profile, age: e.target.value })}
-                                style={{ marginBottom: 0 }}
-                            />
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <input
+                                    type="text"
+                                    placeholder="Name"
+                                    value={profile.name}
+                                    onChange={e => {
+                                        // Optional: block numbers as they type
+                                        const val = e.target.value;
+                                        if (/^[A-Za-z\s]*$/.test(val)) {
+                                            setProfile({ ...profile, name: val });
+                                        }
+                                    }}
+                                    style={{ marginBottom: nameError ? '0.25rem' : 0, borderColor: nameError ? 'red' : undefined }}
+                                    required
+                                />
+                                {nameError && <span style={{ color: 'red', fontSize: '0.8rem' }}>{nameError}</span>}
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <input
+                                    type="number"
+                                    placeholder="Age"
+                                    value={profile.age}
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        // Enforce max 2 digits
+                                        if (val.length <= 2) {
+                                            setProfile({ ...profile, age: val });
+                                        }
+                                    }}
+                                    style={{ marginBottom: ageError ? '0.25rem' : 0, borderColor: ageError ? 'red' : undefined }}
+                                    required
+                                    min="18"
+                                    max="99"
+                                />
+                                {ageError && <span style={{ color: 'red', fontSize: '0.8rem' }}>{ageError}</span>}
+                            </div>
                             <select
                                 value={profile.gender}
                                 onChange={e => setProfile({ ...profile, gender: e.target.value })}
@@ -253,36 +351,82 @@ export default function Onboarding() {
                                     <button
                                         onClick={fetchDeviceLocation}
                                         title="Use my location"
-                                        style={{ background: 'var(--primary)', border: 'none', borderRadius: '12px', padding: '0 1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <MapPin size={20} color="var(--secondary)" />
+                                        style={{ background: '#e23d3f', border: 'none', borderRadius: '12px', padding: '0 1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <MapPin size={20} color="white" />
                                     </button>
                                 </div>
                                 {citySuggestions.length > 0 && (
                                     <ul style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', padding: 0, margin: '4px 0 0 0', listStyle: 'none', zIndex: 10, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', maxHeight: '150px', overflowY: 'auto' }}>
-                                        {citySuggestions.map(city => (
-                                            <li key={city} onClick={() => { setProfile({ ...profile, location: city }); setCitySuggestions([]); }} style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }}>{city}</li>
+                                        {citySuggestions.map(cityObj => (
+                                            <li key={cityObj.id} onClick={() => { setProfile({ ...profile, location: `${cityObj.name}, ${cityObj.state}` }); setCitySuggestions([]); }} style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }}>
+                                                {cityObj.name}, <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{cityObj.state}</span>
+                                            </li>
                                         ))}
                                     </ul>
                                 )}
                             </div>
 
-                            <input
-                                type="tel"
-                                placeholder="+91 9876543210"
-                                value={profile.mobile}
-                                onChange={e => setProfile({ ...profile, mobile: e.target.value })}
-                                style={{ marginBottom: 0 }}
-                            />
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <input
+                                    type="tel"
+                                    placeholder="Mobile (+91 9876543210)"
+                                    value={profile.mobile}
+                                    onChange={e => {
+                                        const val = e.target.value.replace(/\D/g, ''); // Strip non-digits automatically
+                                        if (val.length <= 10) {
+                                            setProfile({ ...profile, mobile: val });
+                                        }
+                                    }}
+                                    style={{ marginBottom: mobileError ? '0.25rem' : 0, borderColor: mobileError ? 'red' : undefined }}
+                                    required
+                                    maxLength={10}
+                                />
+                                {mobileError && <span style={{ color: 'red', fontSize: '0.8rem' }}>{mobileError}</span>}
+                            </div>
                         </div>
                     </div>
 
-                    <Button fullWidth variant="outline" onClick={handleNextStep1} style={{ marginTop: '2rem', borderColor: 'var(--secondary)', borderWidth: '2px' }}>
+                    <Button fullWidth variant="primary" onClick={handleNextStep1} style={{ marginTop: '2rem' }}>
                         Next
                     </Button>
                 </div>
             )}
 
             {step === 2 && (
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }} className="fade-in">
+                    <h1 className="h2" style={{ textAlign: 'center' }}>In your own words</h1>
+                    <p className="text-muted" style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                        Write a short bio to stand out.
+                    </p>
+
+                    <div style={{ flex: 1 }}>
+                        <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <textarea
+                                placeholder="I love hitting the courts on weekends and trying out new cafes. Let's play a match!"
+                                value={profile.bio}
+                                onChange={e => setProfile({ ...profile, bio: e.target.value })}
+                                style={{
+                                    width: '100%',
+                                    minHeight: '150px',
+                                    padding: '1rem',
+                                    borderRadius: '12px',
+                                    border: '1px solid #e5e7eb',
+                                    fontSize: '1rem',
+                                    resize: 'none',
+                                    fontFamily: 'inherit',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                        </div>
+                    </div>
+
+                    <Button fullWidth onClick={handleNextStep2} disabled={!profile.bio.trim()}>
+                        Next
+                    </Button>
+                </div>
+            )}
+
+            {step === 3 && (
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }} className="fade-in">
                     <h1 className="h2" style={{ textAlign: 'center' }}>Tell us about your sport life!</h1>
                     <p className="text-muted" style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
@@ -306,8 +450,8 @@ export default function Onboarding() {
                                             justifyContent: 'center',
                                             padding: '1rem 0.5rem',
                                             borderRadius: '16px',
-                                            border: isSelected ? '2px solid var(--primary)' : '1px solid #e5e7eb',
-                                            backgroundColor: isSelected ? '#f7fee7' : '#fff', // light green tint if selected
+                                            border: isSelected ? '2px solid #e23d3f' : '1px solid #e5e7eb',
+                                            backgroundColor: isSelected ? '#fdf2f2' : '#fff', // Soft red tint if selected
                                             cursor: 'pointer',
                                             transition: 'all 0.2s'
                                         }}
@@ -367,13 +511,13 @@ export default function Onboarding() {
 
                     </div>
 
-                    <Button fullWidth onClick={handleNextStep2} disabled={totalSelected === 0}>
+                    <Button fullWidth onClick={handleNextStep3} disabled={totalSelected === 0}>
                         Next
                     </Button>
                 </div>
             )}
 
-            {step === 3 && (
+            {step === 4 && (
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }} className="fade-in">
                     <h1 className="h2" style={{ textAlign: 'center' }}>Who are you looking for?</h1>
                     <p className="text-muted" style={{ textAlign: 'center', marginBottom: '2rem' }}>
@@ -409,13 +553,13 @@ export default function Onboarding() {
                         </div>
                     </div>
 
-                    <Button fullWidth onClick={handleNextStep3} disabled={!preferences.genderPreference || !preferences.datingRange}>
+                    <Button fullWidth onClick={handleNextStep4} disabled={!preferences.genderPreference || !preferences.datingRange}>
                         Next
                     </Button>
                 </div>
             )}
 
-            {step === 4 && (
+            {step === 5 && (
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }} className="fade-in">
                     <h1 className="h2" style={{ textAlign: 'center' }}>Add your best photos</h1>
                     <p className="text-muted" style={{ textAlign: 'center', marginBottom: '2rem' }}>

@@ -30,8 +30,8 @@ const Button: React.FC<ButtonProps> = ({
 
     const variants = {
         primary: {
-            backgroundColor: 'var(--primary)',
-            color: 'var(--text-main)',
+            backgroundColor: '#e23d3f',
+            color: 'white',
         },
         secondary: {
             backgroundColor: 'var(--card-bg)',

@@ -17,6 +17,7 @@ model User {
   mobile           String
   genderPreference String
   datingRange      String
+  bio              String?
   
   sports           String   // Storing JSON string of sports array
   playSports       String   // Storing JSON string
@@ -71,4 +72,10 @@ model Message {
   date        String
   read        Boolean  @default(false)
   systemAlert Boolean  @default(false)
+}
+
+model City {
+  id    String @id @default(uuid())
+  name  String
+  state String
 }

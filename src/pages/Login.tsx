@@ -45,23 +45,28 @@ export default function Login() {
             height: '100vh',
             backgroundColor: 'var(--card-bg)', // White theme
             color: 'var(--text-main)',
-            justifyContent: 'space-between',
-            alignItems: 'center'
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '8vh'
         }}>
-            <div style={{ marginTop: '30vh', textAlign: 'center', width: '100%' }}>
-                <h1 style={{ fontSize: '3.5rem', fontWeight: 900, marginBottom: '0.5rem', letterSpacing: '0.05em', color: 'var(--secondary)' }}>DEUCE</h1>
-                <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)' }}>Find Your Match</p>
+            <div style={{ textAlign: 'center', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <img src="/logo.png" alt="Deuce Logo" style={{ width: '120px', height: '120px', marginBottom: '0.25rem', borderRadius: '30px', objectFit: 'contain' }} />
+                <h1 style={{ fontFamily: '"Poppins", sans-serif', fontSize: '3.5rem', fontWeight: 600, marginBottom: '0.5rem', letterSpacing: '0.05em', color: '#e23d3f', marginTop: 0 }}>Deuce</h1>
+                <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)', marginTop: 0 }}>Game On. Love On.</p>
             </div>
 
-            <div style={{ marginBottom: '2rem', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ marginBottom: '1.5rem' }}>
-                    <GoogleLogin
-                        onSuccess={handleSuccess}
-                        onError={() => console.error("Login Failed")}
-                        size="large"
-                        shape="pill"
-                        theme="outline"
-                    />
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ marginBottom: '1.5rem', width: '100%', display: 'flex', justifyContent: 'center' }}>
+                    <div style={{ width: '320px', display: 'flex', justifyContent: 'center', transform: 'scale(1.2)', transformOrigin: 'top center', marginBottom: '1rem' }}>
+                        <GoogleLogin
+                            onSuccess={handleSuccess}
+                            onError={() => console.error("Login Failed")}
+                            size="large"
+                            shape="pill"
+                            theme="outline"
+                            width="280"
+                        />
+                    </div>
                 </div>
                 <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-muted)', maxWidth: '250px' }}>
                     By continuing, you agree to our Terms of Service and Privacy Policy.
